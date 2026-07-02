@@ -26,6 +26,7 @@ export function generateDailyText(data: {
 }): string {
   const dateParts = data.reportDate.split("-");
   const shortDate = `${dateParts[0].slice(2)}.${dateParts[1]}.${dateParts[2]}`;
+  const monthLabel = `${Number(dateParts[1])}月`;
 
   const namesList = (names?: string | null) => {
     if (!names || names.trim() === "") return "无";
@@ -53,12 +54,12 @@ export function generateDailyText(data: {
 
   return `${shortDate}运营数据日报总结：
 1、新客体验（每周标准至少3个）：${data.newExperienceCount || 0}（${namesList(data.newExperienceNames)}）
-（6月总数：${data.monthExperienceTotal || 0}）
+（${monthLabel}总数：${data.monthExperienceTotal || 0}）
 2、新客咨询（每周标准至少5个）：${data.newConsultCount || 0}（${namesList(data.newConsultNames)}）
-（6月总数：${data.monthConsultTotal || 0}）
+（${monthLabel}总数：${data.monthConsultTotal || 0}）
 3、每日课程邀约会员数（每天标准至少5个）：${data.invitationCount || 0}（${namesList(data.invitationNames)}）
 4、好评数（每日标准至少2个）：${data.reviewCount || 0}（${reviewNames(data.reviewDetails)}）
-（6月总数：${data.monthReviewTotal || 0}）
+（${monthLabel}总数：${data.monthReviewTotal || 0}）
 5、优质会员课美照/视频数（每天至少给3个会员发送）：${data.photoCount || 0}（${photoList(data.photoNames)}）
 6、小班课量：${data.groupClassCount || 0}
 7、私教课量：${data.privateClassCount || 0}
