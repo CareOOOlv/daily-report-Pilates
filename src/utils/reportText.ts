@@ -107,11 +107,11 @@ export function generateWeeklyText(data: {
   const groupTotal =
     data.classItems?.reduce((sum, t) => sum + (t.groupCount || 0), 0) || 0;
 
-  const classLines = data.classItems
-    ?.map(
-      (t) =>
-        `${t.teacherName}私教${t.privateCount || 0}小班${t.groupCount || 0}`
-    )
+  const privateLines = data.classItems
+    ?.map((t) => `${t.teacherName}${t.privateCount || 0}`)
+    .join(" ");
+  const groupLines = data.classItems
+    ?.map((t) => `${t.teacherName}${t.groupCount || 0}`)
     .join(" ");
 
   const lowClassLines =
@@ -129,8 +129,8 @@ ${revenueLines}
 总数：${totalRevenue}
 
 二、课量：
-私教 ${classLines}共${privateTotal}
-小班 ${classLines}共${groupTotal}
+私教 ${privateLines || "无"}共${privateTotal}
+小班 ${groupLines || "无"}共${groupTotal}
 合计${privateTotal + groupTotal}
 
 三、好评：${data.reviewTotal || 0}
