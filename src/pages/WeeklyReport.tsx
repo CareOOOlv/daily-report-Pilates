@@ -18,13 +18,14 @@ import {
 } from "@/utils/reportText";
 import { addWeeks, subWeeks } from "date-fns";
 
-const TEACHERS = ["蕾蕾", "莉莉", "君君"];
+const DEFAULT_TEACHERS = ["蕾蕾", "莉莉", "君君"];
 
 export default function WeeklyReport() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [sheetOpen, setSheetOpen] = useState(false);
   const [generatedText, setGeneratedText] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [teachers, setTeachers] = useState<string[]>(DEFAULT_TEACHERS);
 
   const weekStart = toISODate(getMondayOfWeek(currentWeek));
   const weekEnd = toISODate(getSundayOfWeek(currentWeek));
@@ -35,10 +36,12 @@ export default function WeeklyReport() {
   >([]);
   const [classData, setClassData] = useState<
     Record<string, { privateCount: string; groupCount: string }>
-  >({
-    蕾蕾: { privateCount: "", groupCount: "" },
-    莉莉: { privateCount: "", groupCount: "" },
-    君君: { privateCount: "", groupCount: "" },
+  >(() => {
+    const init: Record<string, { privateCount: string; groupCount: string }> = {};
+    DEFAULT_TEACHERS.forEach((t) => {
+      init[t] = { privateCount: "", groupCount: "" };
+    });
+    return init;
   });
   const [newDealCount, setNewDealCount] = useState("");
   const [oldDealCount, setOldDealCount] = useState("");
@@ -123,14 +126,47 @@ export default function WeeklyReport() {
 
   const resetForm = () => {
     setRevenueItems([]);
-    setClassData({
-      蕾蕾: { privateCount: "", groupCount: "" },
-      莉莉: { privateCount: "", groupCount: "" },
-      君君: { privateCount: "", groupCount: "" },
+    const init: Record<string, { privateCount: string; groupCount: string }> = {};
+    teachers.forEach((t) => {
+      init[t] = { privateCount: "", groupCount: "" };
     });
+    setClassData(init);
     setNewDealCount("");
     setOldDealCount("");
     setLowClassMembers([]);
+  };
+
+  // Teacher handlers
+  const addTeacher = () => {
+    const usedNames = new Set(teachers);
+    let i = 1;
+    let name = `老师${i}`;
+    while (usedNames.has(name)) {
+      i += 1;
+      name = `老师${i}`;
+    }
+    const newName = prompt("请输入新老师姓名：", name);
+    if (!newName || !newName.trim()) return;
+    const trimmed = newName.trim();
+    if (teachers.includes(trimmed)) {
+      alert(`已存在老师「${trimmed}」`);
+      return;
+    }
+    setTeachers((prev) => [...prev, trimmed]);
+    setClassData((prev) => ({
+      ...prev,
+      [trimmed]: { privateCount: "", groupCount: "" },
+    }));
+  };
+
+  const removeTeacher = (name: string) => {
+    if (!confirm(`确定删除老师「${name}」吗？相关课量数据也会一并移除。`)) return;
+    setTeachers((prev) => prev.filter((t) => t !== name));
+    setClassData((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   // Revenue handlers
@@ -169,11 +205,11 @@ export default function WeeklyReport() {
     }));
   };
 
-  const privateClassTotal = TEACHERS.reduce(
+  const privateClassTotal = teachers.reduce(
     (sum, t) => sum + (parseInt(classData[t]?.privateCount) || 0),
     0
   );
-  const groupClassTotal = TEACHERS.reduce(
+  const groupClassTotal = teachers.reduce(
     (sum, t) => sum + (parseInt(classData[t]?.groupCount) || 0),
     0
   );
@@ -236,7 +272,7 @@ export default function WeeklyReport() {
           customerName: r.customerName,
           amount: parseInt(r.amount) || 0,
         })),
-      classItems: TEACHERS.map((t) => ({
+      classItems: teachers.map((t) => ({
         teacherName: t,
         privateCount: parseInt(classData[t]?.privateCount) || 0,
         groupCount: parseInt(classData[t]?.groupCount) || 0,
@@ -254,7 +290,7 @@ export default function WeeklyReport() {
   }, [
     weekStart, weekEnd, totalRevenue, privateClassTotal, groupClassTotal,
     totalClasses, autoSummary, newDealCount, oldDealCount, lowClassCount,
-    revenueItems, classData, lowClassMembers,
+    revenueItems, classData, lowClassMembers, teachers,
   ]);
 
   // 监听所有表单数据变化，自动保存
@@ -267,6 +303,7 @@ export default function WeeklyReport() {
       newDealCount,
       oldDealCount,
       lowClassMembers,
+      teachers,
     ],
     1500
   );
@@ -284,7 +321,7 @@ export default function WeeklyReport() {
           customerName: r.customerName,
           amount: parseInt(r.amount) || 0,
         })),
-      classItems: TEACHERS.map((t) => ({
+      classItems: teachers.map((t) => ({
         teacherName: t,
         privateCount: parseInt(classData[t]?.privateCount) || 0,
         groupCount: parseInt(classData[t]?.groupCount) || 0,
@@ -310,7 +347,7 @@ export default function WeeklyReport() {
   }, [
     weekStart, weekEnd, totalRevenue, revenueItems, classData,
     autoSummary, newDealCount, newDealRate, oldDealCount,
-    lowClassMembers, doSave,
+    lowClassMembers, doSave, teachers,
   ]);
 
   const goPrevWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
@@ -429,12 +466,21 @@ export default function WeeklyReport() {
                 <th className="text-left py-2 text-[#6B6861] font-normal">
                   教师
                 </th>
-                {TEACHERS.map((t) => (
+                {teachers.map((t) => (
                   <th
                     key={t}
                     className="text-center py-2 text-[#2B2926] font-medium"
                   >
-                    {t}
+                    <div className="flex items-center justify-center gap-1">
+                      <span>{t}</span>
+                      <button
+                        onClick={() => removeTeacher(t)}
+                        className="w-4 h-4 flex items-center justify-center rounded hover:bg-red-50 text-[#6B6861] hover:text-red-500 transition-colors"
+                        aria-label={`删除老师 ${t}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </th>
                 ))}
                 <th className="text-center py-2 text-[#066B60] font-semibold">
@@ -445,7 +491,7 @@ export default function WeeklyReport() {
             <tbody>
               <tr className="border-b border-[#E9E5DD]">
                 <td className="py-3 text-[#6B6861]">私教</td>
-                {TEACHERS.map((t) => (
+                {teachers.map((t) => (
                   <td key={t} className="py-2 px-1">
                     <Input
                       type="number"
@@ -463,7 +509,7 @@ export default function WeeklyReport() {
               </tr>
               <tr>
                 <td className="py-3 text-[#6B6861]">小班</td>
-                {TEACHERS.map((t) => (
+                {teachers.map((t) => (
                   <td key={t} className="py-2 px-1">
                     <Input
                       type="number"
@@ -482,6 +528,14 @@ export default function WeeklyReport() {
             </tbody>
           </table>
         </div>
+        <Button
+          onClick={addTeacher}
+          variant="outline"
+          className="mt-3 w-full h-9 rounded-xl border-dashed border-[#D9D5CD] text-[#6B6861] hover:bg-[#F4F2ED]"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          添加老师
+        </Button>
         <div className="mt-3 pt-3 border-t border-[#E9E5DD] text-center">
           <span className="text-sm text-[#6B6861]">合计</span>
           <span className="text-xl font-bold text-[#066B60] ml-2">
